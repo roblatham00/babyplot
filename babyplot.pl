@@ -33,9 +33,12 @@ while (<>) {
 	# - since i don't care about the order the boxes are printed, use a
 	# hash whose keys are days and whose values are arrays of entries
 	#print "$start\n";
-	($ss,$mm,$hh,$day,$month,$year,$zone) = strptime($start) or next;
+	#($ss,$mm,$hh,$day,$month,$year,$zone) = strptime($start) or next;
 	# the year is getting messed up.  i guess strptime needs a little help.
 	# not hard to go back to doing it by hand
+	@time = split(/[:\/ ]/, $start);
+	next if (@time != 5);
+	($month,$day,$year,$hh,$mm) = @time;
 
 	$date = DateTime->new(
 		year      => $year,
@@ -44,7 +47,6 @@ while (<>) {
 		hour      => $hh,
 		minute    => $mm,
 		time_zone => 'floating');
-	print "$year $firstday $lastday $date\n";
 	if ((DateTime->compare($date,$firstday)) == -1) {
 		$firstday = $date;
 	}
