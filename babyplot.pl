@@ -35,35 +35,59 @@ while (<>) {
 	# hash whose keys are days and whose values are arrays of entries
 
 	# strptime did not like way date was formatted
-	@time = split(/[:\/ ]/, $start);
-	next if (@time != 5);
-	($month,$day,$year,$hh,$mm) = @time;
+	@starttime = split(/[:\/ ]/, $start);
+	next if (@starttime != 5);
+	next if ($end eq "");  # things like dr visits and other
+				  # zero-duration events cannot be reasonably
+				  # plotted.
+				  # XXX: i did want to plot diaper changes though...
 
-	$date = DateTime->new(
+	@endtime = split(/[:\/ ]/, $end);
+	($month,$day,$year,$hh,$mm) = @starttime;
+
+	$begin = DateTime->new(
 		year      => $year,
 		month     => $month,
 		day       => $day,
 		hour      => $hh,
 		minute    => $mm,
 		time_zone => 'floating');
-	if ((DateTime->compare($date,$firstday)) == -1) {
-		$firstday = $date;
+	if ((DateTime->compare($begin,$firstday)) == -1) {
+		$firstday = $begin;
 	}
-	if ((DateTime->compare($date, $lastday)) == 1) {
-		$lastday = $date;
+	if ((DateTime->compare($begin, $lastday)) == 1) {
+		$lastday = $begin;
 	}
+	($month,$day,$year,$hh,$mm) = @endtime;
+	$ending = DateTime->new(
+		year      => $year,
+		month     => $month,
+		day       => $day,
+		hour      => $hh,
+		minute    => $mm,
+		time_zone => 'floating');
 
 	# since i eventually want to start the plot for a day at 5pm, i may
 	# want to look not just at days but at hours and minutes too: 
-	# my $ndays = $date->subtract_datetime_absolute($firstday)->delta_seconds / (24*60*60);
-	my $ndays = $date->delta_days($firstday)->delta_days;;
-	print "$ndays\n";
+	my $ndays = int($begin->subtract_datetime_absolute($firstday)->delta_seconds / (24*60*60));
+	#my $ndays = $begin->delta_days($firstday)->delta_days;;
 
 	if ($activity eq '"Sleep"') {
-		# easier to read if days start at 5pm.
+		$data->{"start"} = 10;
+		$data->{"end"} = $duration;
+		$data->{"day"} = $ndays;
+		$data->{"color"} = 'green';
+		print $data;
+		push @events, $data;
 	}
 }
 
-print "$firstday\n";
-print "$lastday\n";
+my $count = @events;
+print "found $count events\n";
 
+foreach $item (@events)
+{
+	# $item is a *hash reference*
+	print "$item  ";
+	print "$item->{'end'} $item->{'day'}\n";
+}
