@@ -8,7 +8,8 @@ use Date::Parse;
 use DateTime;
 
 # configuration, such as it is
-my $daystart="17:00";
+my $daystart_hr = 17;
+my $daystart_min = 0;
 
 # couple ideas here:
 # see translation in svg: http://www.w3.org/TR/SVG/coords.html
@@ -53,9 +54,28 @@ while (<>) {
 		minute    => $mm,
 		time_zone => 'floating');
 	if ((DateTime->compare($begin,$firstday)) == -1) {
-		$firstday = $begin;
+		# want to shift the plot so that a row (days) events start at 5pm
+		# two cases: 
+		# - event started after 5pm: round down to 5pm
+		# - event started before 5pm: round up to 5pm, reduce day by one
+		if ( ($begin->hour() >  $daystart_hr) or
+			(($begin->hour() == $daystart_hr) and 
+				$begin->min() > 0)) {
+			$deltamin = $begin->min();
+			$firstday = $begin->clone->
+				set(hour=>$daystart_hr, 
+					minute=>$daystart_min);
+		} else {
+			# back up a day
+			$firstday = $begin->clone();
+			$firstday->subtract(days=>1);
+			$firstday->set(hour=>$daystart_hr, minute=>$daystart_min);
+		}
+
 	}
 	if ((DateTime->compare($begin, $lastday)) == 1) {
+		# don't really need to adjust the end. only capturing it so we
+		# know how fat to make each day-row
 		$lastday = $begin;
 	}
 	($month,$day,$year,$hh,$mm) = @endtime;
@@ -73,6 +93,7 @@ while (<>) {
 	#my $ndays = $begin->delta_days($firstday)->delta_days;;
 
 	if ($activity eq '"Sleep"') {
+		print "===$_";
 		$data->{"start"} = 10;
 		$data->{"end"} = $duration;
 		$data->{"day"} = $ndays;
@@ -89,5 +110,5 @@ foreach $item (@events)
 {
 	# $item is a *hash reference*
 	print "$item  ";
-	print "$item->{'end'} $item->{'day'}\n";
+	print "Sleep from $item->{'start'} to $item->{'end'} on day $item->{'day'}\n";
 }
