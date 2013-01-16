@@ -54,10 +54,13 @@ while (<>) {
 		minute    => $mm,
 		time_zone => 'floating');
 	if ((DateTime->compare($begin,$firstday)) == -1) {
+		# could just put one day, one row, but that makes it hard to
+		# read: one would hope a baby is doing a lot of sleeping
+		# overnight, so 
 		# want to shift the plot so that a row (days) events start at 5pm
 		# two cases: 
-		# - event started after 5pm: round down to 5pm
-		# - event started before 5pm: round up to 5pm, reduce day by one
+		# - event started after 5pm: round "firstday" down to 5pm
+		# - started before 5pm: round "firstday" up to 5pm, reduce day by one
 		if ( ($begin->hour() >  $daystart_hr) or
 			(($begin->hour() == $daystart_hr) and 
 				$begin->min() > 0)) {
@@ -87,21 +90,23 @@ while (<>) {
 		minute    => $mm,
 		time_zone => 'floating');
 
-	# since i eventually want to start the plot for a day at 5pm, i may
-	# want to look not just at days but at hours and minutes too: 
-	my $ndays = int($begin->subtract_datetime_absolute($firstday)->delta_seconds / (24*60*60));
-	#my $ndays = $begin->delta_days($firstday)->delta_days;;
+	my $start_in_seconds = $begin->subtract_datetime_absolute($firstday)->delta_seconds;
+	my $ndays = int(($start_in_seconds) / (24*60*60));
+	my $minutes = ($start_in_seconds - ($ndays*24*60*60))/60;
+
+	#my $ndays = $begin->delta_days($firstday)->delta_days;
 
 	if ($activity eq '"Sleep"') {
-		print "===$_";
-		$data->{"start"} = 10;
-		$data->{"end"} = $duration;
-		$data->{"day"} = $ndays;
-		$data->{"color"} = 'green';
-		print $data;
-		push @events, $data;
+		print "$_";
+		push @events, { "start" => $minutes, 
+			"duration" => $duration,
+			"day" => $ndays,
+			"color" => 'green'};
 	}
 }
+
+# @events init with empty item. shift it away.  perl stinks.
+shift @events;
 
 my $count = @events;
 print "found $count events\n";
@@ -110,5 +115,5 @@ foreach $item (@events)
 {
 	# $item is a *hash reference*
 	print "$item  ";
-	print "Sleep from $item->{'start'} to $item->{'end'} on day $item->{'day'}\n";
+	print "Sleep at $item->{'start'} for $item->{'duration'} on day $item->{'day'}\n";
 }
